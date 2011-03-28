@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+//using System.Linq;
 using System.Text;
 using System.IO;
 using System.Windows.Forms;
@@ -57,26 +57,35 @@ namespace BackupTool
         [STAThread]
         public static void Main(string[] args)
         {
-            if (Program.ProgCount == 0)
+            try
             {
-                ProgCount = 1;
-                Program prog = new Program(args);
-                ProgList[0] = prog;
-                prog.Show();
-                if (!ProgList[0].Options.UseGui)
+                if (Program.ProgCount == 0)
                 {
-                    ProgList[0].DoCopy();
+                    ProgCount = 1;
+                    Program prog = new Program(args);
+                    ProgList[0] = prog;
+                    prog.Show();
+                    if (!ProgList[0].Options.UseGui)
+                    {
+                        ProgList[0].DoCopy();
+                    }
+                }
+                else if (Program.ProgCount == 1)
+                {
+                    ProgList[1] = new Program(args);
+                    if (ProgList[0].gui != null)
+                    {
+                        ProgList[1].CopyEvent += ProgList[0].gui.Program_CopyEvent;
+                    }
+                    Thread thread2 = new Thread(new ThreadStart(ProgList[1].DoCopy));
+                    thread2.Start();
                 }
             }
-            else if (Program.ProgCount == 1)
+            catch (Exception e)
             {
-                ProgList[1] = new Program(args);
-                if (ProgList[0].gui != null)
-                {
-                    ProgList[1].CopyEvent += ProgList[0].gui.Program_CopyEvent;
-                }
-                Thread thread2 = new Thread(new ThreadStart(ProgList[1].DoCopy));
-                thread2.Start();
+                Console.WriteLine("" + e);
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
             }
         }
 
@@ -220,7 +229,6 @@ namespace BackupTool
 
                     FileInfo fs = new FileInfo(sourceFile);
                     FileInfo ft = new FileInfo(targetFile);
-                    Console.WriteLine("====== " + fs.LastWriteTime.Ticks + "," + ft.LastWriteTime.Ticks + " =============");
                     if (ft.Exists && ft.LastWriteTime.Ticks <= fs.LastWriteTime.Ticks)
                         WriteLine("Ignoring file '" + sourceFile+"'");
                     else
