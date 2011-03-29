@@ -42,9 +42,9 @@
             this.label3 = new System.Windows.Forms.Label();
             this.logBox = new System.Windows.Forms.TextBox();
             this.verboseCheck = new System.Windows.Forms.CheckBox();
-            this.outputText = new System.Windows.Forms.TextBox();
             this.commandText = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
+            this.progressBarControl1 = new AdriansLib.ProgressBarControl();
             this.SuspendLayout();
             // 
             // sourceBox
@@ -55,6 +55,7 @@
             this.sourceBox.Name = "sourceBox";
             this.sourceBox.Size = new System.Drawing.Size(309, 20);
             this.sourceBox.TabIndex = 0;
+            this.sourceBox.TextChanged += new System.EventHandler(this.updateCommandLine);
             // 
             // destBox
             // 
@@ -64,6 +65,7 @@
             this.destBox.Name = "destBox";
             this.destBox.Size = new System.Drawing.Size(309, 20);
             this.destBox.TabIndex = 1;
+            this.destBox.TextChanged += new System.EventHandler(this.updateCommandLine);
             // 
             // label1
             // 
@@ -161,6 +163,7 @@
             this.logBox.Name = "logBox";
             this.logBox.Size = new System.Drawing.Size(309, 20);
             this.logBox.TabIndex = 8;
+            this.logBox.TextChanged += new System.EventHandler(this.updateCommandLine);
             // 
             // verboseCheck
             // 
@@ -172,18 +175,6 @@
             this.verboseCheck.Text = "Verbose";
             this.verboseCheck.UseVisualStyleBackColor = true;
             this.verboseCheck.CheckedChanged += new System.EventHandler(this.doDeleteCheck_CheckedChanged);
-            // 
-            // outputText
-            // 
-            this.outputText.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
-            this.outputText.Location = new System.Drawing.Point(10, 188);
-            this.outputText.Multiline = true;
-            this.outputText.Name = "outputText";
-            this.outputText.ReadOnly = true;
-            this.outputText.Size = new System.Drawing.Size(445, 115);
-            this.outputText.TabIndex = 12;
             // 
             // commandText
             // 
@@ -203,14 +194,28 @@
             this.label4.TabIndex = 14;
             this.label4.Text = "Command Line Options";
             // 
+            // progressBarControl1
+            // 
+            this.progressBarControl1.Cancelled = false;
+            this.progressBarControl1.Cursor = System.Windows.Forms.Cursors.Arrow;
+            this.progressBarControl1.EnableTextBox = true;
+            this.progressBarControl1.Location = new System.Drawing.Point(10, 188);
+            this.progressBarControl1.Maximum = 100;
+            this.progressBarControl1.Minimum = 0;
+            this.progressBarControl1.Name = "progressBarControl1";
+            this.progressBarControl1.Result = null;
+            this.progressBarControl1.Size = new System.Drawing.Size(445, 150);
+            this.progressBarControl1.TabIndex = 15;
+            this.progressBarControl1.Value = 0;
+            // 
             // BackupGui
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(464, 315);
+            this.ClientSize = new System.Drawing.Size(464, 344);
+            this.Controls.Add(this.progressBarControl1);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.commandText);
-            this.Controls.Add(this.outputText);
             this.Controls.Add(this.verboseCheck);
             this.Controls.Add(this.logButton);
             this.Controls.Add(this.label3);
@@ -246,8 +251,8 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox logBox;
         private System.Windows.Forms.CheckBox verboseCheck;
-        private System.Windows.Forms.TextBox outputText;
         private System.Windows.Forms.TextBox commandText;
         private System.Windows.Forms.Label label4;
+        private AdriansLib.ProgressBarControl progressBarControl1;
     }
 }

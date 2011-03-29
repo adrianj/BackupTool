@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-//using System.Linq;
+using AdriansLib;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
@@ -22,18 +22,18 @@ namespace BackupTool
         {
             mProgram = prog;
             InitializeComponent();
-            mProgram.CopyEvent += new CopyEventHandler(Program_CopyEvent);
-            mProgram.Options.Verbose = false;
+            mProgram.ProgressEvent += new ProgressEventHandler(Program_ProgressEvent);
+            verboseCheck.Checked = mProgram.Options.Verbose;
             sourceBox.Text = mProgram.Options.SourceDirectory;
             destBox.Text = mProgram.Options.DestinationDirectory;
             logBox.Text = mProgram.Options.LogFilename;
         }
 
         // thread safe events...
-        public void Program_CopyEvent(object sender, CopyEventArgs e)
+        public void Program_ProgressEvent(object sender, ProgressEventArgs e)
         {
-            setText(e.Message);
-            if (e.Finished) setDone("GO!");
+            string text = e.PrintOutlinedMessage();
+            if (e.Code != ProgressEventArgs.ProgressCode.InProgress) setDone("GO!");
         }
 
         delegate void setTextCallback(string text);
@@ -54,19 +54,6 @@ namespace BackupTool
             }
         }
 
-        private void setText(string text)
-        {
-            if (outputText.InvokeRequired)
-            {
-                setTextCallback d = new setTextCallback(setText);
-                this.Invoke(d, new object[] { text });
-            }
-            else
-            {
-                outputText.Text = text;
-            }
-        }
-
         private void sourceButton_Click(object sender, EventArgs e)
         {
             folderBrowserDialog.ShowDialog();
@@ -83,7 +70,7 @@ namespace BackupTool
                 {
                     MessageBox.Show("" + ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-                updateCommandLine();
+                //updateCommandLine();
             }
         }
 
@@ -104,7 +91,7 @@ namespace BackupTool
                 {
                     MessageBox.Show("" + ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-                updateCommandLine();
+                //updateCommandLine();
             }
         }
 
@@ -112,14 +99,14 @@ namespace BackupTool
         {
             try
             {
-                mProgram.Options.OpenLog(saveFileDialog.FileName);
-                logBox.Text = mProgram.Options.LogFilename;
+                //mProgram.Options.OpenLog(saveFileDialog.FileName);
+                logBox.Text = saveFileDialog.FileName;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("" + ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            updateCommandLine();
+            //updateCommandLine();
         }
 
         private void logButton_Click(object sender, EventArgs e)
@@ -143,36 +130,47 @@ namespace BackupTool
             {
                 try
                 {
-                    /*mProgram.Options.DestinationDirectory = destBox.Text;
-                    mProgram.Options.SourceDirectory = sourceBox.Text;
-                    mProgram.Options.Verbose = verboseCheck.Checked;
-                    mProgram.Options.DeleteNonSourceFiles = doDeleteCheck.Checked;
-                    updateCommandLine();
-                     */
                     string[] args = splitCommand(commandText.Text);
+                    // Quick way to check source/dest are ok
+                    mProgram.Options.SourceDirectory = args[0];
+                    mProgram.Options.DestinationDirectory = args[1];
                     busy = true;
                     goButton.Text = "Cancel";
                     Program.Main(args);
                 }
                 catch (ArgumentException ex)
                 {
-                    MessageBox.Show("" + ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
             {
                 if (Program.ProgList[1] != null)
                 {
-                    Program.ProgList[1].Options.Cancel = true;
+                    Program.ProgList[1].Cancel = true;
                 }
             }
         }
 
         private void updateCommandLine()
         {
-            string s = mProgram.Options.SourceDirectory +
-                " " + mProgram.Options.DestinationDirectory;
-            if (mProgram.Options.LogFilename != null) s += " --log " + mProgram.Options.LogFilename;
+            updateCommandLine(null, null);
+        }
+        private void updateCommandLine(object sender, EventArgs e)
+        {
+            string src = sourceBox.Text;
+            if(sourceBox.Text.Contains(" ")) src = "\""+sourceBox.Text+"\"";
+            string dst = destBox.Text;
+            if (destBox.Text.Contains(" "))  dst = "\"" + destBox.Text + "\"";
+            
+            string s = src +" "+dst;
+
+            if (logBox.Text != null && logBox.Text.Length > 0)
+            {
+                s += " --log ";
+                if (logBox.Text.Contains(" ")) s += "\"" + logBox.Text + "\"";
+                else s += logBox.Text;
+            }
             if (verboseCheck.Checked) s += " --verbose";
             if (doDeleteCheck.Checked) s += " --deleteNonSourceFiles";
             commandText.Text = s;
@@ -210,5 +208,6 @@ namespace BackupTool
             }
             return res.ToArray();
         }
+
     }
 }

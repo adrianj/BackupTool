@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-//using System.Linq;
+using AdriansLib;
 using System.Text;
 using System.IO;
 using System.Windows.Forms;
@@ -9,38 +9,23 @@ using System.Threading;
 namespace BackupTool
 {
 
-    public delegate void CopyEventHandler(object sender, CopyEventArgs e);
-
-    public class CopyEventArgs : EventArgs
-    {
-        public bool Finished { get; set; }
-        public string Message { get; set; }
-        public CopyEventArgs(string arg)
-        {
-            Message = arg;
-            Finished = false;
-        }
-        public CopyEventArgs(string arg,bool finished)
-        {
-            Message = arg;
-            Finished = finished;
-        }
-    }
-
-
     public class Program
     {
         public static Program[] ProgList = new Program[2];
         public static int ProgCount = 0;
 
-        public bool Finished { get; set; }
-
+        private int mFileCount = 0;
+        private int mFileTotal = 1;
         public OptionClass Options;
+        public bool Cancel { get; set; }
         public BackupGui gui {get;set;}
-        public event CopyEventHandler CopyEvent;
-        public void OnCopyEvent(CopyEventArgs e)
+        public event ProgressEventHandler ProgressEvent;
+        private ProgressEventArgs mProgress = new ProgressEventArgs();
+
+        public void OnProgressEvent(ProgressEventArgs e)
         {
-            CopyEvent(null, e);
+            if(ProgressEvent != null)
+                ProgressEvent(this, e);
         }
 
         public static string[] ForbiddenDestinations = new string[] {
@@ -57,51 +42,87 @@ namespace BackupTool
         [STAThread]
         public static void Main(string[] args)
         {
-            try
+            if (Program.ProgCount == 0)
             {
-                if (Program.ProgCount == 0)
+                ProgCount = 1;
+                ProgList[0] = new Program(args);
+                ProgList[0].Show();
+                if (!ProgList[0].Options.UseGui)
                 {
-                    ProgCount = 1;
-                    Program prog = new Program(args);
-                    ProgList[0] = prog;
-                    prog.Show();
-                    if (!ProgList[0].Options.UseGui)
-                    {
-                        ProgList[0].DoCopy();
-                    }
-                }
-                else if (Program.ProgCount == 1)
-                {
-                    ProgList[1] = new Program(args);
-                    if (ProgList[0].gui != null)
-                    {
-                        ProgList[1].CopyEvent += ProgList[0].gui.Program_CopyEvent;
-                    }
-                    Thread thread2 = new Thread(new ThreadStart(ProgList[1].DoCopy));
-                    thread2.Start();
+                    ProgList[0].DoCopy();
                 }
             }
-            catch (Exception e)
+            else if (Program.ProgCount == 1)
             {
-                Console.WriteLine("" + e);
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
+                ProgList[1] = new Program(args);
+                if (ProgList[0].gui != null)
+                {
+                    ProgList[1].ProgressEvent += ProgList[0].gui.Program_ProgressEvent;
+                }
+                Thread thread2 = new Thread(new ThreadStart(ProgList[1].DoCopy));
+                thread2.Start();
             }
+            else
+                Console.WriteLine("No more than 2 threads");
         }
 
-        
+        private string[] mArgs;
 
         public Program(string [] args)
         {
+            mArgs = args;
             Options = new OptionClass(args);
             try
             {
                 Options.ReadAllOptions(args);
             }
-            catch (ArgumentNullException e)
+            catch (Exception e)
             {
-                throw;
-                //Error(e);
+                Exit(e);
+            }
+        }
+
+        public void Exit(Exception e)
+        {
+            if (Options != null)
+            {
+                if (e == null)
+                {
+                    if (Cancel)
+                    {
+                        mProgress.MessageL3 = "CANCELLED!";
+                        mProgress.Code = ProgressEventArgs.ProgressCode.Cancelled;
+                        OnProgressEvent(mProgress);
+                    }
+                    else
+                    {
+
+                        mProgress.MessageL3 = "DONE!";
+                        mProgress.Code = ProgressEventArgs.ProgressCode.Done;
+                        OnProgressEvent(mProgress);
+                    }
+                }
+                else
+                {
+                    if (!Options.UseGui)
+                    {
+                        WriteLine("" + e.GetType() + "" + e + Environment.NewLine);
+                        Console.WriteLine(Properties.Resources.Usage);
+                    }
+                    mProgress.MessageL3 = ""+e+Environment.NewLine+"ERROR!";
+                    mProgress.Code = ProgressEventArgs.ProgressCode.Error;
+                    OnProgressEvent(mProgress);
+                }
+
+                Options.CloseLog();
+            }
+            if (ProgList[0] != null && ProgList[0].Options != null && !ProgList[0].Options.UseGui)
+            {
+                if(Options != null && Options.PauseOnExit)
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+                // Should really switch the exception here.
+                Environment.Exit(1);
             }
         }
 
@@ -114,61 +135,81 @@ namespace BackupTool
             }
         }
 
-        public void DoCopy()
+        public void PrintArgs()
         {
-            Finished = false;
-
-            WriteLine("Options:" + Environment.NewLine
-                + "\tDeleteNonSourceFiles: " + Options.DeleteNonSourceFiles + Environment.NewLine
-                + "\tSourceDirectory: " + Options.SourceDirectory + Environment.NewLine
-                + "\tDestinationDirectory: " + Options.DestinationDirectory + Environment.NewLine
+            string s = "Options:" + Environment.NewLine;
+            if (mArgs.Length > 1) s += "\tSourceDirectory: " + mArgs[0] + Environment.NewLine;
+            else s += "\tSourceDirectory: NULL" + Environment.NewLine;
+            if (mArgs.Length > 2) s += "\tDestinationDirectory: " + mArgs[1] + Environment.NewLine;
+            else s += "\tDestinationDirectory: NULL" + Environment.NewLine;
+            s += "\tLogFile: " + Options.LogFilename + Environment.NewLine
                 + "\tPauseOnExit: " + Options.PauseOnExit + Environment.NewLine
                 + "\tVerbose: " + Options.Verbose + Environment.NewLine
-                + "\tLogFile: " + Options.Log + Environment.NewLine
-                + "\tUseGui: " + Options.UseGui);
+                + "\tDeleteNonSourceFiles: " + Options.DeleteNonSourceFiles + Environment.NewLine
+                + "\tUseGui: " + Options.UseGui;
+            WriteLine(s);
+        }
+
+        public void DoCopy()
+        {
+            PrintArgs();
+            mProgress.Code = ProgressEventArgs.ProgressCode.InProgress;
             try
             {
-                if (Options.DestinationDirectory == null)
-                {
-                    throw new ArgumentException("Could not write to Destination: '" + Options.DestinationDirectory + "'");
-                }
                 if (Options.SourceDirectory == null)
                 {
-                    throw new ArgumentException("Could not read Source: '" + Options.SourceDirectory + "'");
+                    string m = "Could not read from Source: '";
+                    if (mArgs.Length > 0) m += mArgs[0];
+                    throw new ArgumentException(m + "'");
                 }
+                if (Options.DestinationDirectory == null)
+                {
+                    string m = "Could not write to Destination: '";
+                    if (mArgs.Length > 1) m += mArgs[1];
+                    throw new ArgumentException(m + "'");
+                }
+                mProgress.MessageL2 = "Counting Files...";
+                mFileCount = 0;
+                mFileTotal = 0;
+                CountFiles("");
                 CopyTree("", "");
+                Exit(null);
             }
-            catch (ArgumentNullException e)
+            catch (ArgumentException e)
             {
-                throw;
-                //Error(e);
+                Exit(e);
             }
-            Options.CloseLog();
-            if (Options.Cancel)
-                OnCopyEvent(new CopyEventArgs("CANCELLED!", true));
-            else
-                OnCopyEvent(new CopyEventArgs("DONE!", true));
-            if (Options.PauseOnExit)
-            {
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
-            }
-
-            Finished = true;
         }
 
         private bool checkForCancel()
         {
-            if (Options.Cancel) return true;
+            if (Cancel) return true;
             System.Threading.Thread.Sleep(0);
             return false;
         }
 
-        public void CopyTree(string source, string destDirectory)
+        public void CountFiles(string source)
         {
             if (checkForCancel()) return;
             string sourceDir = Options.SourceDirectory + source;
-            string targetDir = Options.DestinationDirectory + destDirectory;
+            mProgress.MessageL3 = "Directory '" + sourceDir + "'";
+            OnProgressEvent(mProgress);
+            foreach(string s in Directory.GetDirectories(sourceDir))
+            {
+                CountFiles(source+Path.GetFileName(s) + Path.DirectorySeparatorChar);
+            }
+            foreach (string s in Directory.GetFiles(sourceDir))
+            {
+                mFileTotal++;
+            }
+        }
+
+        public void CopyTree(string source, string destination)
+        {
+            if (checkForCancel()) return;
+            string sourceDir = Options.SourceDirectory + source;
+            string targetDir = Options.DestinationDirectory + destination;
+            mProgress.MessageL2 = "Copying directory '" + sourceDir + "' to '" + targetDir;
             WriteLine("Copying directory '" + sourceDir + "' to '" + targetDir);
             if (sourceDir[sourceDir.Length - 1] == Path.DirectorySeparatorChar)
             {
@@ -217,6 +258,8 @@ namespace BackupTool
                         }
                         if (delete)
                         {
+                            mProgress.MessageL3 = "Deleting file '" + tt + "'";
+                            OnProgressEvent(mProgress);
                             WriteLine("Deleting file '" + tt + "'");
                             File.Delete(tt);
                         }
@@ -230,10 +273,18 @@ namespace BackupTool
                     FileInfo fs = new FileInfo(sourceFile);
                     FileInfo ft = new FileInfo(targetFile);
                     if (ft.Exists && ft.LastWriteTime.Ticks <= fs.LastWriteTime.Ticks)
-                        WriteLine("Ignoring file '" + sourceFile+"'");
+                    {
+                        string m = "("+(++mFileCount)+" / "+mFileTotal+") Ignoring file '" + sourceFile + "'";
+                        WriteLine(m);
+                        mProgress.MessageL3 = m;
+                        OnProgressEvent(mProgress);
+                    }
                     else
                     {
-                        WriteLine("Copying file '" + sourceFile + "' to '" + targetFile + "'");
+                        string m = "(" + (++mFileCount) + " / " + mFileTotal + ") Copying file '" + sourceFile + "' to '" + targetFile + "'";
+                        WriteLine(m);
+                        mProgress.MessageL3 = m;
+                        OnProgressEvent(mProgress);
                         File.Copy(sourceFile, targetFile, true);
                     }
                 }
@@ -263,7 +314,6 @@ namespace BackupTool
             {
                 Options.Log.WriteLine(text);
             }
-            OnCopyEvent(new CopyEventArgs(text));
         }
 
         public void Error(Exception e)
@@ -278,7 +328,7 @@ namespace BackupTool
     /// </summary>
     public class OptionClass
     {
-        public bool Cancel { get; set; }
+        //public bool Cancel { get; set; }
         public bool PauseOnExit { get; set; }
         public bool DeleteNonSourceFiles { get; set; }
         private string mSourceDirectory = null;
@@ -339,8 +389,8 @@ namespace BackupTool
         {
             if (!UseGui)
                 mLog = new StreamWriter(trim(logfilename));
-            else
-                CheckWrite(trim(logfilename));
+            else if(CheckWrite(trim(logfilename)))
+                throw new ArgumentException("Invalid Log file: " + logfilename + ".");
             mLogFile = logfilename;
         }
         public void CloseLog()
@@ -380,31 +430,23 @@ namespace BackupTool
                 if (s.Equals("--pauseonexit", StringComparison.InvariantCultureIgnoreCase)) PauseOnExit = true;
                 if (s.Equals("--verbose", StringComparison.InvariantCultureIgnoreCase)) Verbose = true;
                 if (s.Equals("--gui", StringComparison.InvariantCultureIgnoreCase)) UseGui = true;
+                if (s.Equals("--deletenonsourcefiles", StringComparison.InvariantCultureIgnoreCase)) DeleteNonSourceFiles = true;
             }
         }
 
         public void ReadAllOptions(string[] args)
         {
-            for(int i = 0; i < args.Length; i++)
+            for (int i = 0; i < args.Length; i++)
             {
                 string s = args[i];
-                if (s.Equals("--deletenonsourcefiles",StringComparison.InvariantCultureIgnoreCase)) DeleteNonSourceFiles = true;
                 if (!UseGui && s.Equals("--log", StringComparison.InvariantCultureIgnoreCase))
                     if (checkArgument(i + 1, args))
-                        if (checkPath(args[i + 1], true, false)) OpenLog(args[i + 1]);
-                        else throw new ArgumentException("Could not write to log file: " + args[i + 1]);
+                        if (checkPath(trim(args[i + 1]), true, false)) OpenLog(trim(args[i + 1]));
+                        else throw new ArgumentException("Could not write to log file: " + trim(args[i + 1]));
                     else throw new ArgumentException("Invalid log file syntax");
             }
-            // If not using GUI, then source and destination (1st and 2nd args) must already be great.
-            try
-            {
-                if (checkArgument(0, args)) SourceDirectory = args[0];
-                if (checkArgument(1, args)) DestinationDirectory = args[1];
-            }
-            catch(ArgumentException e)
-            {
-                if(!UseGui) throw;
-            }
+            if (checkArgument(0, args)) SourceDirectory = trim(args[0]);
+            if (checkArgument(1, args)) DestinationDirectory = trim(args[1]);
         }
 
         /// <summary>
@@ -454,7 +496,7 @@ namespace BackupTool
                     if (inf.Length == 0) File.Delete(path);
                 }
             }
-            catch (IOException ioe)
+            catch (IOException)
             {
                 return false;
             }
