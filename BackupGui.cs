@@ -11,47 +11,19 @@ using System.IO;
 namespace BackupTool
 {
 
-    
-
     public partial class BackupGui : Form
     {
         private Program mProgram;
-        private bool busy = false;
+        //private bool busy = false;
 
         public BackupGui(Program prog)
         {
             mProgram = prog;
             InitializeComponent();
-            mProgram.ProgressEvent += new ProgressEventHandler(Program_ProgressEvent);
             verboseCheck.Checked = mProgram.Options.Verbose;
             sourceBox.Text = mProgram.Options.SourceDirectory;
             destBox.Text = mProgram.Options.DestinationDirectory;
             logBox.Text = mProgram.Options.LogFilename;
-        }
-
-        // thread safe events...
-        public void Program_ProgressEvent(object sender, ProgressEventArgs e)
-        {
-            string text = e.PrintOutlinedMessage();
-            if (e.Code != ProgressEventArgs.ProgressCode.InProgress) setDone("GO!");
-        }
-
-        delegate void setTextCallback(string text);
-        delegate void jobDoneCallback(string text);
-
-        private void setDone(string text)
-        {
-            if (goButton.InvokeRequired)
-            {
-                jobDoneCallback d = new jobDoneCallback(setDone);
-                this.Invoke(d, new object[] { text });
-                busy = false;
-            }
-            else
-            {
-                goButton.Text = text;
-                busy = false;
-            }
         }
 
         private void sourceButton_Click(object sender, EventArgs e)
@@ -64,13 +36,12 @@ namespace BackupTool
                 try
                 {
                     mProgram.Options.SourceDirectory = f;
-                    sourceBox.Text = mProgram.Options.SourceDirectory;
+                    sourceBox.Text = mProgram.Options.SourceDirectory; // will call updateCommandLine()
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("" + ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-                //updateCommandLine();
             }
         }
 
@@ -85,13 +56,12 @@ namespace BackupTool
                 try
                 {
                     mProgram.Options.DestinationDirectory = f;
-                    destBox.Text = mProgram.Options.DestinationDirectory;
+                    destBox.Text = mProgram.Options.DestinationDirectory; // will call updateCommandLine()
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("" + ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-                //updateCommandLine();
             }
         }
 
@@ -99,14 +69,12 @@ namespace BackupTool
         {
             try
             {
-                //mProgram.Options.OpenLog(saveFileDialog.FileName);
-                logBox.Text = saveFileDialog.FileName;
+                logBox.Text = saveFileDialog.FileName; // will call updateCommandLine()
             }
             catch (Exception ex)
             {
                 MessageBox.Show("" + ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            //updateCommandLine();
         }
 
         private void logButton_Click(object sender, EventArgs e)
@@ -126,36 +94,20 @@ namespace BackupTool
 
         private void goButton_Click(object sender, EventArgs e)
         {
-            if (!busy)
+            try
             {
-                try
-                {
-                    string[] args = splitCommand(commandText.Text);
-                    // Quick way to check source/dest are ok
-                    mProgram.Options.SourceDirectory = args[0];
-                    mProgram.Options.DestinationDirectory = args[1];
-                    busy = true;
-                    goButton.Text = "Cancel";
-                    Program.Main(args);
-                }
-                catch (ArgumentException ex)
-                {
-                    MessageBox.Show("" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                string[] args = splitCommand(commandText.Text);
+                Program prog = new Program(args);
+                progressBarControl1.StartWorker(prog.DoCopy);
             }
-            else
+            catch (ArgumentException ex)
             {
-                if (Program.ProgList[1] != null)
-                {
-                    Program.ProgList[1].Cancel = true;
-                }
+                MessageBox.Show("" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void updateCommandLine()
-        {
-            updateCommandLine(null, null);
-        }
+        private void updateCommandLine() { updateCommandLine(null, null); }
+
         private void updateCommandLine(object sender, EventArgs e)
         {
             string src = sourceBox.Text;
@@ -168,14 +120,21 @@ namespace BackupTool
             if (logBox.Text != null && logBox.Text.Length > 0)
             {
                 s += " --log ";
-                if (logBox.Text.Contains(" ")) s += "\"" + logBox.Text + "\"";
-                else s += logBox.Text;
+                string log = logBox.Text;
+                if (log.Length < 5 || !log.Substring(log.Length - 4).Equals(".txt")) log += ".txt";
+                if (log.Contains(" ")) log = "\"" + log + "\"";
+                s += log;
             }
             if (verboseCheck.Checked) s += " --verbose";
             if (doDeleteCheck.Checked) s += " --deleteNonSourceFiles";
             commandText.Text = s;
         }
 
+        /// <summary>
+        /// Splits a string into command line arguments, handling "string with spaces and quotes" appropriately.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <returns></returns>
         private string [] splitCommand(string command)
         {
             string[] ss = command.Split(new char[] { ' ' });

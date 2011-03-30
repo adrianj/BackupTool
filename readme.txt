@@ -20,10 +20,4 @@ I guess it's not really a great "backup" tool as I'm not archiving multiple copi
 
 Todo:
 
-* Modify progress bar to provide more information
-   -  Make it multithreaded
-   -  Add a cancel feature
-   -  Have it listen to ProgressEvents
-   -  Provide an optional information box.
-* Count files to be copied to have an indication of progress.
 * Add bidirectional feature.

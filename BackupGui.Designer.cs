@@ -36,7 +36,6 @@
             this.destButton = new System.Windows.Forms.Button();
             this.folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
             this.doDeleteCheck = new System.Windows.Forms.CheckBox();
-            this.goButton = new System.Windows.Forms.Button();
             this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
             this.logButton = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
@@ -118,18 +117,6 @@
             this.doDeleteCheck.UseVisualStyleBackColor = true;
             this.doDeleteCheck.CheckedChanged += new System.EventHandler(this.doDeleteCheck_CheckedChanged);
             // 
-            // goButton
-            // 
-            this.goButton.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
-            this.goButton.Location = new System.Drawing.Point(10, 159);
-            this.goButton.Name = "goButton";
-            this.goButton.Size = new System.Drawing.Size(445, 23);
-            this.goButton.TabIndex = 7;
-            this.goButton.Text = "GO!";
-            this.goButton.UseVisualStyleBackColor = true;
-            this.goButton.Click += new System.EventHandler(this.goButton_Click);
-            // 
             // saveFileDialog
             // 
             this.saveFileDialog.Filter = "Text files (*.txt)|*.txt";
@@ -196,10 +183,10 @@
             // 
             // progressBarControl1
             // 
-            this.progressBarControl1.Cancelled = false;
             this.progressBarControl1.Cursor = System.Windows.Forms.Cursors.Arrow;
+            this.progressBarControl1.DialogResult = System.Windows.Forms.DialogResult.OK;
             this.progressBarControl1.EnableTextBox = true;
-            this.progressBarControl1.Location = new System.Drawing.Point(10, 188);
+            this.progressBarControl1.Location = new System.Drawing.Point(10, 159);
             this.progressBarControl1.Maximum = 100;
             this.progressBarControl1.Minimum = 0;
             this.progressBarControl1.Name = "progressBarControl1";
@@ -207,12 +194,13 @@
             this.progressBarControl1.Size = new System.Drawing.Size(445, 150);
             this.progressBarControl1.TabIndex = 15;
             this.progressBarControl1.Value = 0;
+            this.progressBarControl1.ButtonClick += new System.EventHandler(this.goButton_Click);
             // 
             // BackupGui
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(464, 344);
+            this.ClientSize = new System.Drawing.Size(464, 307);
             this.Controls.Add(this.progressBarControl1);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.commandText);
@@ -220,7 +208,6 @@
             this.Controls.Add(this.logButton);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.logBox);
-            this.Controls.Add(this.goButton);
             this.Controls.Add(this.doDeleteCheck);
             this.Controls.Add(this.destButton);
             this.Controls.Add(this.sourceButton);
@@ -245,7 +232,6 @@
         private System.Windows.Forms.Button destButton;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog;
         private System.Windows.Forms.CheckBox doDeleteCheck;
-        private System.Windows.Forms.Button goButton;
         private System.Windows.Forms.SaveFileDialog saveFileDialog;
         private System.Windows.Forms.Button logButton;
         private System.Windows.Forms.Label label3;

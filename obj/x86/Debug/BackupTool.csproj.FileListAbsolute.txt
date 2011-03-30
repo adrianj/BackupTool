@@ -1,8 +1,0 @@
-C:\Users\adrianj\documents\visual studio 2010\Projects\BackupTool\bin\Debug\BackupTool.exe
-C:\Users\adrianj\documents\visual studio 2010\Projects\BackupTool\bin\Debug\BackupTool.pdb
-C:\Users\adrianj\documents\visual studio 2010\Projects\BackupTool\obj\x86\Debug\ResolveAssemblyReference.cache
-C:\Users\adrianj\documents\visual studio 2010\Projects\BackupTool\obj\x86\Debug\BackupTool.exe
-C:\Users\adrianj\documents\visual studio 2010\Projects\BackupTool\obj\x86\Debug\BackupTool.pdb
-C:\Users\adrianj\Documents\Visual Studio 2010\Projects\BackupTool\obj\x86\Debug\BackupTool.BackupGui.resources
-C:\Users\adrianj\Documents\Visual Studio 2010\Projects\BackupTool\obj\x86\Debug\GenerateResource.read.1.tlog
-C:\Users\adrianj\Documents\Visual Studio 2010\Projects\BackupTool\obj\x86\Debug\GenerateResource.write.1.tlog
